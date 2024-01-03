@@ -5,10 +5,10 @@ export default function (Alpine) {
   const router = new Router()
 
   const state = Alpine.reactive({
-    mode: 'web',
     base: '',
     href: location.href,
     path: '',
+    hash: location.hash,
     query: {},
     params: {},
     loading: false
@@ -21,6 +21,9 @@ export default function (Alpine) {
     get query () {
       return state.query
     },
+    get hash () {
+      return state.hash
+    },
     get params () {
       return state.params || {}
     },
@@ -28,8 +31,7 @@ export default function (Alpine) {
       return state.loading
     },
     config (config = {}) {
-      if (config.mode !== 'hash' && config.base && config.base.endsWith('/')) config.base = config.base.slice(0, -1)
-      state.mode = config.mode ?? 'web'
+      if (config.base && config.base.endsWith('/')) config.base = config.base.slice(0, -1)
       state.base = config.base ?? ''
     },
     push (...args) {
@@ -58,7 +60,7 @@ export default function (Alpine) {
   Alpine.magic('router', () => route)
 
   function getTargetURL (href) {
-    return new RouterURL(href, { mode: state.mode, base: state.base })
+    return new RouterURL(href, { base: state.base })
   }
 
   function parse () {
@@ -66,22 +68,29 @@ export default function (Alpine) {
     state.path = url.path
     state.query = url.query
     state.params = router.match(url)
+    if (state.hash !== url.hash) {
+      state.hash = url.hash
+      if (url.hash !== "") {
+        Alpine.nextTick(() => {
+          let el = document.getElementById(url.hash.substring(1))
+          if (el) {
+            el.scrollIntoView()
+          }
+        })
+      }
+    }
   }
 
   Alpine.effect(() => parse())
 
   Alpine.nextTick(() => {
-    if (state.mode === 'web' && !state.base) parse()
+    if (!state.base) parse()
   })
   window.addEventListener('popstate', () => state.href = location.href)
 
   function push (path, options = {}) {
     if (!path.startsWith(location.origin)) {
-      if (state.mode === 'hash') {
-        path = location.origin + (state.base || '/') + '#' + path
-      } else {
-        path = location.origin + state.base + path
-      }
+      path = location.origin + state.base + path
     }
     if (location.href !== path) {
       history[options.replace ? 'replaceState' : 'pushState']({}, '', path)

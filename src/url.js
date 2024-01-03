@@ -1,9 +1,8 @@
 export class RouterURL {
   #url
 
-  constructor(url, opts = {}) {
-    this.#url = new URL(url)
-    this.mode = opts.mode ?? 'web'
+  constructor(foo, opts = {}) {
+    this.#url = new URL(foo)
     this.base = opts.base ?? ''
   }
 
@@ -15,10 +14,12 @@ export class RouterURL {
     return this.#url.href
   }
 
+  get hash () {
+    return this.#url.hash
+  }
+
   get path () {
-    return (this.mode === 'hash' && this.#url.hash)
-      ? this.#url.hash.slice(1).split("?").shift()
-      : this.#url.pathname.replace(this.base, '')
+    return this.#url.pathname.replace(this.base, '')
   }
 
   get query () {
@@ -30,11 +31,11 @@ export class RouterURL {
   }
 
   resolve (path, params, replace = false) {
-    const l = this.#url.origin + this.base + (this.mode === 'hash' ? '#' : '') + path
+    const l = this.#url.origin + this.base + path
     const r = replace
       ? new URLSearchParams(params).toString()
       : new URLSearchParams({ ...this.query, ...params }).toString()
-    this.url = l + (r ? '?' + r : '')
+    this.url = l + (r ? '?' + r : '') + this.#url.hash
     return this
   }
 }
